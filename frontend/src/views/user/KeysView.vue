@@ -1700,8 +1700,15 @@ const importToCcswitch = (row: ApiKey) => {
   executeCcsImport(row, platform === 'gemini' ? 'gemini' : 'claude')
 }
 
+const trimTrailingSlashes = (value: string) => value.replace(/\/+$/, '')
+
+const withOpenAIV1Endpoint = (baseUrl: string) => {
+  const normalized = trimTrailingSlashes(baseUrl)
+  return /\/v1$/i.test(normalized) ? normalized : `${normalized}/v1`
+}
+
 const executeCcsImport = (row: ApiKey, clientType: 'claude' | 'gemini') => {
-  const baseUrl = publicSettings.value?.api_base_url || window.location.origin
+  const baseUrl = trimTrailingSlashes(publicSettings.value?.api_base_url || window.location.origin)
   const platform = row.group?.platform || 'anthropic'
 
   // Determine app name and endpoint based on platform and client type
@@ -1716,7 +1723,7 @@ const executeCcsImport = (row: ApiKey, clientType: 'claude' | 'gemini') => {
     switch (platform) {
       case 'openai':
         app = 'codex'
-        endpoint = baseUrl
+        endpoint = withOpenAIV1Endpoint(baseUrl)
         break
       case 'gemini':
         app = 'gemini'
