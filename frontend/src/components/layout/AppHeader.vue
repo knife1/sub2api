@@ -40,10 +40,15 @@
             </template>
           </div>
         </div>
-        <router-link to="/codex-guide" class="header-action-link header-action-link-doc">
+        <a
+          :href="codexGuidePdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="header-action-link header-action-link-doc"
+        >
           <Icon name="document" size="sm" />
           使用文档
-        </router-link>
+        </a>
       </div>
 
       <!-- Right: Announcements + Docs + Language + Subscriptions + Balance + User Dropdown -->
@@ -247,6 +252,7 @@ import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import SubscriptionProgressMini from '@/components/common/SubscriptionProgressMini.vue'
 import AnnouncementBell from '@/components/common/AnnouncementBell.vue'
 import Icon from '@/components/icons/Icon.vue'
+import codexGuidePdf from '@/assets/codex(1)(1)(1)(1).pdf'
 
 const router = useRouter()
 const route = useRoute()
@@ -381,12 +387,12 @@ onBeforeUnmount(() => {
 
 .recharge-marquee::before {
   top: 0;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), transparent);
+  //background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), transparent);
 }
 
 .recharge-marquee::after {
   bottom: 0;
-  background: linear-gradient(0deg, rgba(15, 23, 42, 0.96), transparent);
+  //background: linear-gradient(0deg, rgba(15, 23, 42, 0.96), transparent);
 }
 
 .recharge-marquee-track {
