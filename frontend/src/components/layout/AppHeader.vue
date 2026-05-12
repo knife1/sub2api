@@ -21,6 +21,31 @@
         </div>
       </div>
 
+      <!-- Center: Recharge + Usage Guide -->
+      <div class="mx-4 hidden min-w-0 flex-1 items-center justify-center gap-3 xl:flex">
+        <div class="recharge-marquee" aria-label="咸鱼充值入口">
+          <div class="recharge-marquee-track">
+            <template v-for="round in 2" :key="round">
+              <a
+                v-for="item in rechargeLinks"
+                :key="`${round}-${item.href}`"
+                :href="item.href"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="header-action-link header-action-link-recharge"
+              >
+                <Icon name="creditCard" size="sm" />
+                {{ item.label }}
+              </a>
+            </template>
+          </div>
+        </div>
+        <router-link to="/codex-guide" class="header-action-link header-action-link-doc">
+          <Icon name="document" size="sm" />
+          使用文档
+        </router-link>
+      </div>
+
       <!-- Right: Announcements + Docs + Language + Subscriptions + Balance + User Dropdown -->
       <div class="flex items-center gap-3">
         <!-- Announcement Bell -->
@@ -237,6 +262,12 @@ const dropdownRef = ref<HTMLElement | null>(null)
 const contactInfo = computed(() => appStore.contactInfo)
 const docUrl = computed(() => appStore.docUrl)
 const avatarUrl = computed(() => user.value?.avatar_url?.trim() || '')
+const rechargeLinks = [
+  {
+    label: '咸鱼扫码买充值卡，无任何手续费',
+    href: 'https://m.tb.cn/h.iAOGlWI?tk=f3bO5KsfuCm'
+  }
+] as const
 
 // 只在标准模式的管理员下显示新手引导按钮
 const showOnboardingButton = computed(() => {
@@ -330,6 +361,133 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.recharge-marquee {
+  position: relative;
+  height: 2.25rem;
+  overflow: hidden;
+  border-radius: 0.75rem;
+}
+
+.recharge-marquee::before,
+.recharge-marquee::after {
+  position: absolute;
+  left: 0;
+  z-index: 2;
+  width: 100%;
+  height: 0.55rem;
+  content: "";
+  pointer-events: none;
+}
+
+.recharge-marquee::before {
+  top: 0;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), transparent);
+}
+
+.recharge-marquee::after {
+  bottom: 0;
+  background: linear-gradient(0deg, rgba(15, 23, 42, 0.96), transparent);
+}
+
+.recharge-marquee-track {
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  gap: 0.5rem;
+  animation: recharge-scroll 5.8s ease-in-out infinite;
+}
+
+.recharge-marquee:hover .recharge-marquee-track {
+  animation-play-state: paused;
+}
+
+.header-action-link {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  max-width: min(28rem, 38vw);
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(45, 212, 191, 0.24);
+  padding: 0.45rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 0 auto;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.header-action-link::after {
+  position: absolute;
+  inset: -45% auto -45% -35%;
+  width: 2.25rem;
+  content: "";
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.62), transparent);
+  animation: action-shimmer 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.header-action-link-recharge {
+  color: #fb7185;
+  background: rgba(127, 29, 29, 0.18);
+  border-color: rgba(248, 113, 113, 0.38);
+}
+
+.header-action-link-recharge:hover {
+  color: #fecdd3;
+  background: rgba(127, 29, 29, 0.32);
+  border-color: rgba(248, 113, 113, 0.68);
+}
+
+.header-action-link-doc {
+  color: #38bdf8;
+  background: rgba(14, 116, 144, 0.16);
+  border-color: rgba(56, 189, 248, 0.34);
+}
+
+.header-action-link-doc:hover {
+  color: #bae6fd;
+  background: rgba(14, 116, 144, 0.3);
+  border-color: rgba(56, 189, 248, 0.64);
+}
+
+@keyframes recharge-scroll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-50% - 0.25rem));
+  }
+}
+
+@keyframes action-shimmer {
+  0% {
+    left: -35%;
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  48% {
+    left: 112%;
+    opacity: 0;
+  }
+  100% {
+    left: 112%;
+    opacity: 0;
+  }
+}
+
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: all 0.2s ease;

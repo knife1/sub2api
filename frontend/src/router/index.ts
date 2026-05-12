@@ -145,6 +145,16 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/codex-guide',
+    name: 'CodexGuide',
+    component: () => import('@/views/user/CodexGuideView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '使用文档',
+      description: 'CodeX 使用文档'
+    }
+  },
+  {
     path: '/legal/:documentId',
     name: 'LegalDocument',
     component: () => import('@/views/public/LegalDocumentView.vue'),
