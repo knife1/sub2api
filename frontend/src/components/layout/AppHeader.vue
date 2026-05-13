@@ -271,7 +271,11 @@ const avatarUrl = computed(() => user.value?.avatar_url?.trim() || '')
 const rechargeLinks = [
   {
     label: '咸鱼扫码买充值卡，无任何手续费',
-    href: 'https://m.tb.cn/h.iAOGlWI?tk=f3bO5KsfuCm'
+    href: 'https://m.tb.cn/h.Ra6LOcQ?tk=CCHR5qlGGDjCZ009'
+  },
+  {
+    label: '咸鱼扫码买充值卡，无任何手续费',
+    href: 'https://m.tb.cn/h.Ra6LOcQ?tk=CCHR5qlGGDjCZ009'
   }
 ] as const
 
