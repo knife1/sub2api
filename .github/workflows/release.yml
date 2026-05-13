@@ -1,9 +1,8 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  # 仅手动触发：每次只在确实需要重建镜像时跑（fork-local 改动 2026-05-13，
+  # 与上游 weishaw/sub2api 的 release.yml 不同；tag push 已让位给 mirror-tcr.yml 主动接管）
   workflow_dispatch:
     inputs:
       tag:
