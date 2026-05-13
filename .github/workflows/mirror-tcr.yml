@@ -1,42 +1,79 @@
 name: Mirror to Tencent TCR
 
 on:
+  # 自动：release.yml 跑完后联动触发（不和 release.yml 并行，零 race）
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+  # 手动补镜像后门（release.yml 没跑过、或要重新 mirror 老 tag）
   workflow_dispatch:
     inputs:
       tag:
-        description: 'GHCR tag to mirror (e.g., v0.1.125-knife1-5 or 0.1.125-knife1-5)'
+        description: 'GHCR tag to mirror (e.g., v0.1.125-knife1-5)'
         required: true
         type: string
 
 permissions:
   contents: read
+  packages: read   # 给未来 GHCR pkg 改 private 时 GITHUB_TOKEN 留 pull scope
 
 jobs:
   mirror:
+    # 三档闸门：① 手动 dispatch 始终跑；
+    # ② release.yml success 且是 tag 触发的才跑（startsWith v 过滤掉 branch push 的 workflow_run）
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run'
+        && github.event.workflow_run.conclusion == 'success'
+        && startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: ubuntu-latest
+    env:
+      TCR_REGISTRY: ccr.ccs.tencentyun.com
+      TCR_NAMESPACE: subapi
+      TCR_IMAGE: subapi
+      # 提升 secret 到 job 级 env，让 `if: env.TCR_USERNAME != ''` 哨兵生效
+      # （step 级 env 在 if 求值时还没展开，会读到空串导致 step 永不执行）
+      TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
+      TCR_PASSWORD: ${{ secrets.TCR_PASSWORD }}
     steps:
-      - name: Normalize tag
-        id: norm
+      - name: Resolve tag
+        id: ver
         run: |
-          T="${{ github.event.inputs.tag }}"
-          T="${T#v}"
-          echo "version=$T" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            T="${{ github.event.inputs.tag }}"
+          else
+            T="${{ github.event.workflow_run.head_branch }}"
+          fi
+          echo "version=${T#v}" >> $GITHUB_OUTPUT
+
+      - name: Set lowercase owner
+        id: lc
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Tencent TCR
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ccr.ccs.tencentyun.com
-          username: ${{ secrets.TCR_USERNAME }}
-          password: ${{ secrets.TCR_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Tencent TCR
+        if: ${{ env.TCR_USERNAME != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ env.TCR_USERNAME }}
+          password: ${{ env.TCR_PASSWORD }}
 
       - name: Mirror GHCR -> TCR via imagetools
+        if: ${{ env.TCR_USERNAME != '' }}
         run: |
-          VERSION="${{ steps.norm.outputs.version }}"
-          SRC="ghcr.io/knife1/sub2api:${VERSION}"
-          DST="ccr.ccs.tencentyun.com/subapi/subapi"
+          VERSION="${{ steps.ver.outputs.version }}"
+          SRC="ghcr.io/${{ steps.lc.outputs.owner }}/${{ github.event.repository.name }}:${VERSION}"
+          DST="${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ env.TCR_IMAGE }}"
 
           echo "Source : ${SRC}"
           echo "Destination : ${DST}:${VERSION} and ${DST}:latest"
