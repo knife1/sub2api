@@ -317,6 +317,7 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 import { useAnnouncementStore } from '@/stores/announcements'
 import { formatRelativeTime, formatRelativeWithDateTime } from '@/utils/format'
@@ -324,6 +325,8 @@ import type { UserAnnouncement } from '@/types'
 import Icon from '@/components/icons/Icon.vue'
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const appStore = useAppStore()
 const announcementStore = useAnnouncementStore()
 
@@ -403,8 +406,30 @@ function handleEscape(e: KeyboardEvent) {
   }
 }
 
+async function openAnnouncementByQuery() {
+  const query = route.query.openAnnouncement
+  const keyword = typeof query === 'string' ? query.trim() : ''
+  if (!keyword) return
+
+  try {
+    await announcementStore.fetchAnnouncements(true)
+    const target = announcements.value.find(
+      (item) => item.title.includes(keyword) || item.content.includes(keyword)
+    )
+    if (target) {
+      isModalOpen.value = true
+      openDetail(target)
+    }
+  } finally {
+    const nextQuery = { ...route.query }
+    delete nextQuery.openAnnouncement
+    router.replace({ path: route.path, query: nextQuery })
+  }
+}
+
 onMounted(() => {
   document.addEventListener('keydown', handleEscape)
+  openAnnouncementByQuery()
 })
 
 onBeforeUnmount(() => {
@@ -416,6 +441,13 @@ watch(
   [isModalOpen, detailModalOpen, () => announcementStore.currentPopup],
   ([modal, detail, popup]) => {
     document.body.style.overflow = (modal || detail || popup) ? 'hidden' : ''
+  }
+)
+
+watch(
+  () => route.query.openAnnouncement,
+  () => {
+    openAnnouncementByQuery()
   }
 )
 </script>

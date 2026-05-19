@@ -23,23 +23,15 @@
 
       <!-- Center: Recharge + Usage Guide -->
       <div class="mx-4 hidden min-w-0 flex-1 items-center justify-center gap-3 xl:flex">
-        <div class="recharge-marquee" aria-label="咸鱼充值入口">
-          <div class="recharge-marquee-track">
-            <template v-for="round in 2" :key="round">
-              <a
-                v-for="item in rechargeLinks"
-                :key="`${round}-${item.href}`"
-                :href="item.href"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="header-action-link header-action-link-recharge"
-              >
-                <Icon name="creditCard" size="sm" />
-                {{ item.label }}
-              </a>
-            </template>
-          </div>
-        </div>
+        <button
+          class="header-action-link header-action-link-recharge"
+          type="button"
+          @click="openRechargeAnnouncement"
+          aria-label="咸鱼充值入口"
+        >
+          <Icon name="creditCard" size="sm" />
+          咸鱼扫码买充值卡，无任何手续费
+        </button>
         <a
           :href="codexGuidePdf"
           target="_blank"
@@ -268,17 +260,6 @@ const dropdownRef = ref<HTMLElement | null>(null)
 const contactInfo = computed(() => appStore.contactInfo)
 const docUrl = computed(() => appStore.docUrl)
 const avatarUrl = computed(() => user.value?.avatar_url?.trim() || '')
-const rechargeLinks = [
-  {
-    label: '咸鱼扫码买充值卡，无任何手续费',
-    href: 'https://m.tb.cn/h.R0pu6Bm?tk=BQiK5JS7zVy'
-  },
-  {
-    label: '咸鱼扫码买充值卡，无任何手续费',
-    href: 'https://m.tb.cn/h.RZ3TyrP?tk=7K875JSxELe'
-  }
-] as const
-
 // 只在标准模式的管理员下显示新手引导按钮
 const showOnboardingButton = computed(() => {
   return !authStore.isSimpleMode && user.value?.role === 'admin'
@@ -331,6 +312,16 @@ function toggleMobileSidebar() {
   appStore.toggleMobileSidebar()
 }
 
+function openRechargeAnnouncement() {
+  router.push({
+    path: route.path,
+    query: {
+      ...route.query,
+      openAnnouncement: '购买地址'
+    }
+  })
+}
+
 function toggleDropdown() {
   dropdownOpen.value = !dropdownOpen.value
 }
@@ -371,46 +362,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.recharge-marquee {
-  position: relative;
-  height: 2.25rem;
-  overflow: hidden;
-  border-radius: 0.75rem;
-}
-
-.recharge-marquee::before,
-.recharge-marquee::after {
-  position: absolute;
-  left: 0;
-  z-index: 2;
-  width: 100%;
-  height: 0.55rem;
-  content: "";
-  pointer-events: none;
-}
-
-.recharge-marquee::before {
-  top: 0;
-  //background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), transparent);
-}
-
-.recharge-marquee::after {
-  bottom: 0;
-  //background: linear-gradient(0deg, rgba(15, 23, 42, 0.96), transparent);
-}
-
-.recharge-marquee-track {
-  display: flex;
-  flex-direction: column;
-  width: max-content;
-  gap: 0.5rem;
-  animation: recharge-scroll 5.8s ease-in-out infinite;
-}
-
-.recharge-marquee:hover .recharge-marquee-track {
-  animation-play-state: paused;
-}
-
 .header-action-link {
   position: relative;
   display: inline-flex;
@@ -469,15 +420,6 @@ onBeforeUnmount(() => {
   color: #bae6fd;
   background: rgba(14, 116, 144, 0.3);
   border-color: rgba(56, 189, 248, 0.64);
-}
-
-@keyframes recharge-scroll {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(calc(-50% - 0.25rem));
-  }
 }
 
 @keyframes action-shimmer {
