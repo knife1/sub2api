@@ -1,0 +1,126 @@
+name: Mirror to Tencent TCR
+
+# 主路径：独立 build 流水线，从源码构建镜像并推 TCR
+# 与 release.yml 的差异只在最后 push 目标（TCR vs GHCR），其余流程完全一致
+# release.yml 是备选——若本 workflow 失败，手动 dispatch release.yml 把镜像构到 GHCR
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build and push to TCR (e.g., v0.1.125-knife1-7)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    env:
+      TCR_REGISTRY: ccr.ccs.tencentyun.com
+      TCR_NAMESPACE: subapi
+      TCR_IMAGE: subapi
+      # 提升 secret 到 job 级 env，让 `if: env.TCR_USERNAME != ''` 哨兵生效
+      # （step 级 env 在 if 求值时还没展开，会读到空串导致 step 永不执行）
+      TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
+      TCR_PASSWORD: ${{ secrets.TCR_PASSWORD }}
+    steps:
+      - name: Resolve tag
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            T="${{ github.event.inputs.tag }}"
+          else
+            T="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION="${T#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${T}" >> $GITHUB_OUTPUT
+          echo "Resolved tag=${T} version=${VERSION}"
+
+      - name: Checkout tag
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.ver.outputs.tag }}
+
+      - name: Write VERSION file from tag
+        run: |
+          echo "${{ steps.ver.outputs.version }}" > backend/cmd/server/VERSION
+          cat backend/cmd/server/VERSION
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Build frontend (embeds into backend/internal/web/dist)
+        run: pnpm run build
+        working-directory: frontend
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          check-latest: false
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Tencent TCR
+        if: ${{ env.TCR_USERNAME != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ env.TCR_USERNAME }}
+          password: ${{ env.TCR_PASSWORD }}
+
+      - name: Set lowercase owner
+        id: lc
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Run GoReleaser (build + push TCR)
+        if: ${{ env.TCR_USERNAME != '' }}
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: '~> v2'
+          args: release --clean --skip=validate --config=.goreleaser.tcr.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO_OWNER: ${{ github.repository_owner }}
+          GITHUB_REPO_OWNER_LOWER: ${{ steps.lc.outputs.owner }}
+          GITHUB_REPO_NAME: ${{ github.event.repository.name }}
+          TCR_REGISTRY: ${{ env.TCR_REGISTRY }}
+          TCR_NAMESPACE: ${{ env.TCR_NAMESPACE }}
+          TCR_IMAGE: ${{ env.TCR_IMAGE }}
+
+      - name: Print final image
+        if: ${{ env.TCR_USERNAME != '' }}
+        run: |
+          IMG="${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ env.TCR_IMAGE }}:${{ steps.ver.outputs.version }}"
+          echo "Build + push complete."
+          echo "Image: ${IMG}"
+          echo ""
+          echo "Server can now:"
+          echo "  docker pull ${IMG}"
+          echo "  docker tag  ${IMG} ghcr.io/${{ steps.lc.outputs.owner }}/${{ github.event.repository.name }}:${{ steps.ver.outputs.version }}"
