@@ -33,7 +33,7 @@
           咸鱼扫码买充值卡，无任何手续费
         </button>
         <a
-          :href="codexGuidePdf"
+          :href="codexGuideUrl"
           target="_blank"
           rel="noopener noreferrer"
           class="header-action-link header-action-link-doc"
@@ -244,7 +244,6 @@ import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import SubscriptionProgressMini from '@/components/common/SubscriptionProgressMini.vue'
 import AnnouncementBell from '@/components/common/AnnouncementBell.vue'
 import Icon from '@/components/icons/Icon.vue'
-import codexGuidePdf from '@/assets/codex(1)(1)(1)(1).pdf'
 
 const router = useRouter()
 const route = useRoute()
@@ -259,6 +258,7 @@ const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const contactInfo = computed(() => appStore.contactInfo)
 const docUrl = computed(() => appStore.docUrl)
+const codexGuideUrl = 'https://docs.qq.com/doc/DVGZsQ0dQdXVIUXNj?aidPos=detail&no_promotion=1&is_blank_or_template=blank&u=98ecb22822ea4fe2a590ca7620ef3ce9'
 const avatarUrl = computed(() => user.value?.avatar_url?.trim() || '')
 // 只在标准模式的管理员下显示新手引导按钮
 const showOnboardingButton = computed(() => {
