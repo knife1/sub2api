@@ -1,0 +1,64 @@
+# GoReleaser config for mirror-tcr pipeline
+# Parallel to .goreleaser.simple.yaml (which pushes to GHCR).
+# This config pushes the SAME image content to Tencent TCR instead.
+# Env vars required at runtime: TCR_REGISTRY, TCR_NAMESPACE, TCR_IMAGE,
+#                               GITHUB_REPO_OWNER, GITHUB_REPO_NAME
+version: 2
+
+project_name: sub2api
+
+before:
+  hooks:
+    - go mod tidy -C backend
+
+builds:
+  - id: sub2api
+    dir: backend
+    main: ./cmd/server
+    binary: sub2api
+    flags:
+      - -tags=embed
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+      - -X main.BuildType=release
+
+archives: []
+
+checksum:
+  disable: true
+
+changelog:
+  disable: true
+
+# 仅推送 TCR x86_64 镜像
+dockers:
+  - id: tcr-amd64
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "{{ .Env.TCR_REGISTRY }}/{{ .Env.TCR_NAMESPACE }}/{{ .Env.TCR_IMAGE }}:{{ .Version }}-amd64"
+      - "{{ .Env.TCR_REGISTRY }}/{{ .Env.TCR_NAMESPACE }}/{{ .Env.TCR_IMAGE }}:{{ .Version }}"
+      - "{{ .Env.TCR_REGISTRY }}/{{ .Env.TCR_NAMESPACE }}/{{ .Env.TCR_IMAGE }}:latest"
+    dockerfile: Dockerfile.goreleaser
+    use: buildx
+    extra_files:
+      - deploy/docker-entrypoint.sh
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .Commit }}"
+      - "--label=org.opencontainers.image.source=https://github.com/{{ .Env.GITHUB_REPO_OWNER }}/{{ .Env.GITHUB_REPO_NAME }}"
+
+docker_manifests: []
+
+# 关键：不创建 GitHub Release，把 release 创建权完全留给 release.yml（备选路线）
+release:
+  disable: true

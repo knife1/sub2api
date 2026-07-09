@@ -1,9 +1,7 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  # tag 触发已交给 mirror-tcr.yml 接管；release.yml 仅保留手动兜底（推 GHCR）
   workflow_dispatch:
     inputs:
       tag:
